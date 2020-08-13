@@ -4,11 +4,12 @@
 import json, subprocess, random, os, psutil, time, operator
 
 #the bat file is configured to run 16 person tournaments
-popNo = 16
+popNo = 15 #might need to be changed to 15
 #path to forge appdata folder
 forgePath = r'C:\Users\Muir7\AppData\Roaming\Forge'
 #take eliteNo to be 4
 eliteNo = 5
+mutationRate = 0.001
 popLeft = popNo - eliteNo
 
 #create deck class 
@@ -63,16 +64,9 @@ def setDecks(population):
         for i in range(0, len(population[x].path)):
             deck.write(str(population[x].noCard[i]) + " " + population[x].path[i] + "|" + population[x].setName[i] + "\n")
         deck.close()
-    r'''
-    deckB = open(r"C:\Users\Muir7\AppData\Roaming\Forge\decks\constructed\deck2.dck", "w")
-    deckB.write(template2)
-    for x in range(0, len(b.path)):
-        deckB.write(str(b.noCard[x]) + " " + b.path[x] + "|" + b.setName[x] + "\n")
-    deckB.close()
-    '''
 
 #This will take in a population and get a fitness value for all members
-def fitnessFunction(population):
+def fitnessFunction(population, popNo):
     #call subroutine setDecks
     setDecks(population)
     #run runForge.bat
@@ -95,7 +89,7 @@ def fitnessFunction(population):
     File = max(filePaths, key=lambda filePaths: os.path.getmtime(filePaths))
     logFile = open(File)
     #read last 16 lines, where the results are
-    text = logFile.readlines()[-16:]
+    text = logFile.readlines()[-popNo:]
     splitNum = []
     fitness = {}
     fitness['popNo'] = []
@@ -107,6 +101,7 @@ def fitnessFunction(population):
     logFile.close()
     return fitness
 
+#sort the population
 def sortPopulation(population, fitness):
     popSorted = []
     for x in range(0, len(fitness['popNo'])):
@@ -122,6 +117,8 @@ def selection(sortedPopulation, eliteNo, popLeft):
     del sortedPopulation[:eliteNo]
     choices = weightedSelect(sortedPopulation, popLeft)
     results.extend(choices)
+    for x in range(0, len(results)):
+        print(len(results[x].path))
     return results
 
 def weightedSelect(sortedPopulation, popLeft):
@@ -150,51 +147,47 @@ def breed(deck1, deck2):
     child = {'path':[], 'setName':[], 'noCard':[], 'colour':[], 'types':[], 'mainColour':''}
     child['mainColour'] = deck1.mainColour
     deck1Copy = deck1
-    deck2Copy = deck2
+    deck2Copy = deck2    
     tempPath = []
-    for x in range(0, len(deck1.path)):
+    deckIndex = []
+    for x in range(0, len(deck1.path)): #add all land cards to child deck
         if deck1.types[x] == 'Land':
             child = appendChild(child, deck1, x)
     for x in range(0, len(child['path'])):
-        deck1Copy.remove(child['path'][x])
+        deck1Copy.remove(child['path'][x]) #remove land cards from deck1Copy
     for x in range(0, len(deck2.path)):
         if deck2.types[x] == 'Land':
-            tempPath.append(deck2.path[x])
+            tempPath.append(x)
     for x in range(0, len(tempPath)):
-        deck2Copy.remove(tempPath[x])
-    (deck1Copy.path).extend(deck2Copy.path)
+        deck2Copy.pop(x) #remove land cards from deck2Copy
+    (deck1Copy.path).extend(deck2Copy.path) #add all cards and attributes to deck1Copy
     (deck1Copy.setName).extend(deck2Copy.setName)
     (deck1Copy.noCard).extend(deck2Copy.noCard)
     (deck1Copy.colour).extend(deck2Copy.colour)
     (deck1Copy.types).extend(deck2Copy.types)
-    #use random.sample or gen random numbers to create deck
-    #card = random.sample(deck1Copy.path, len(deck1Copy.path))
+    for x in range(0, len(deck1Copy.path)):
+        if deck1.colour[x] != child['mainColour'] and len(deck1.colour[x]) != 0:
+            deckIndex.append(x)
+    #
+    for x in range(1, len(deckIndex)+1):
+        deck1Copy.path.pop(deckIndex[-x])
+    #
+    #add to each card an index so we can use random.sample
+    for x in range(0, len(deck1Copy.path)):
+        deck1Copy.path[x] = [deck1Copy.path, x]
+    randPath = random.sample(deck1Copy.path, len(deck1Copy.path)) #randomise deck
     if len(deck1Copy.path) > 60:
-        length = 60
+        length = 60 #max length of MTG deck
     else:
-        length = len(deck1Copy.path)
-    print(length)
+        length = len(randPath)
     for x in range(0, length):
-        num = random.randint(0, length-1)
-        #print(child['mainColour'][0])
-        #print(type(deck1Copy.colour[num]))
-        print(len(deck1Copy.colour))
-        print(num)
-        print(deck1Copy.colour[num])
-        if len(deck1Copy.colour[num]) == 0:
-            deck1Copy.colour[num] = ['blank']
-        while deck1Copy.colour[num][0] != child['mainColour'][0] and deck1Copy.colour[num][0] != 'blank':
-            num = random.randint(0, length-1)
-        child = appendChild(child, deck1Copy, num)
-        deck1Copy.path.remove(deck1Copy.path[num])
-        deck1Copy.setName.remove(deck1Copy.setName[num])
-        deck1Copy.noCard.remove(deck1Copy.noCard[num])
-        deck1Copy.colour.remove(deck1Copy.colour[num])
-        deck1Copy.types.remove(deck1Copy.types[num])
+        i = randPath[x][1]
+        child = appendChild(child, deck1Copy, i)
+    #
     return child
 
 def appendChild(child, deck, x):
-    child['path'].append(deck.path[x])
+    child['path'].append(deck.path[x][0])
     child['setName'].append(deck.setName[x])
     child['noCard'].append(deck.noCard[x])
     child['colour'].append(deck.colour[x])
@@ -208,7 +201,6 @@ def breedPopulation(population, eliteNo, popNo):
     for x in range(0, eliteNo):
         children.append(population[x])
     #loop to create children - try to make sure that the parents have the same mainColour
-    length = popNo - eliteNo
     for x in range(0, len(pool)):
         while pool[x].mainColour[0] != pool[-(x+1)].mainColour[0]:
             pool = random.sample(population, len(population))
@@ -216,27 +208,86 @@ def breedPopulation(population, eliteNo, popNo):
         children.append(Deck(child['path'], child['setName'], child['noCard'], child['colour'], child['types']))
     return children
 
-a = getPop(popNo)
-#b = fitnessFunction(a)
-b = {'popNo':[2,3,6,13,9,8,14,1,12,5,15,11,10,7,4,0], 
-     'value':[12,9,9,9,9,6,6,6,6,6,6,3,3,3,3,0]}
-c = sortPopulation(a, b)
-d = selection(c, eliteNo, popLeft)
-counted = {'B':0,'G':0,'R':0,'U':0,'W':0,'':0}
-colours = ['B', 'G', 'R', 'U', 'W', '']
-e = breedPopulation(d, eliteNo, popNo)
-for x in range(0, len(e)):
-    print(e[x].mainColour)
-print('\n')
-print(len(e))
+def mutatePop(population, mutationRate):
+    newPop = []
+    for x in range(0, len(population)):
+        mutatedInd = mutate(population[x], mutationRate)
+        newPop.append(Deck(mutatedInd['path'], mutatedInd['setName'], mutatedInd['noCard'], mutatedInd['colour'], mutatedInd['types']))
+    #return mutated population
+    return newPop
+  
+def mutate(individual, mutationRate):
+    mutatedInd = {'path':[], 'setName':[], 'noCard':[], 'colour':[], 'types':[]}
+    for x in range(len(individual.path)):
+        mutatedInd['path'].append(individual.path[x])
+        mutatedInd['setName'].append(individual.setName[x])
+        mutatedInd['noCard'].append(individual.noCard[x])
+        mutatedInd['colour'].append(individual.colour[x])
+        mutatedInd['types'].append(individual.types[x])
+        if random.random() < mutationRate:
+            types = 'abc'
+            colour = 'abc'
+            i = 0
+            with open('mtgjson2.json', 'r') as file:
+                data = json.load(file)
+                while types != mutatedInd['types'][x] or colour != mutatedInd['colour'][x]:
+                    if i == 21005:
+                        break
+                    colour = data['colours'][i]
+                    types = data['types'][i]
+                    i += 1
+                if i != 21005:
+                    mutatedInd['path'][x] = data['cardName'][i-1]
+                    mutatedInd['setName'][x] = data['cardSet'][i-1]
+                    mutatedInd['colour'][x] = data['colours'][i-1]
+                    mutatedInd['types'][x] = data['types'][i-1]
+    return mutatedInd
+
+def nextGeneration(population, popNo, eliteNo, popLeft, mutationRate):
+    #b = fitnessFunction(a)
+    fitness = {'popNo':[12, 10, 8, 14, 11, 9, 1, 13, 0, 2, 6, 3, 7, 4, 5], 
+         'value':[9, 9, 9, 9, 6, 6, 6, 6, 6, 6, 3, 3, 3, 3, 0]}
+    popRanked = sortPopulation(population, fitness)
+    popSelected = selection(popRanked, eliteNo, popLeft)
+    popOffspring = breedPopulation(popSelected, eliteNo, popNo)
+    mutatedPop = mutatePop(popOffspring, mutationRate)
+    return mutatedPop
+
+population = getPop(popNo)
+for x in range(0, len(population[0].path)):
+    print(len(population[0].path))
+mutatedPop = nextGeneration(population, popNo, eliteNo, popLeft, mutationRate)
+
+#the error does not occur in getPop. I think it might be in sortPopulation or selection
 
 r'''
+
+#Test to see if nextGeneration works
+
+
+
+
+
+#Test to see if the mutation works.
+    a = getPop(popNo)
+    #b = fitnessFunction(a)
+    b = {'popNo':[12, 10, 8, 14, 11, 9, 1, 13, 0, 2, 6, 3, 7, 4, 5], 
+         'value':[9, 9, 9, 9, 6, 6, 6, 6, 6, 6, 3, 3, 3, 3, 0]}
+    c = sortPopulation(a, b)
+    d = selection(c, eliteNo, popLeft)
+    e = breedPopulation(d, eliteNo, popNo)
+    f = mutatePop(e, mutationRate)
+    print(f[0].path[0])
+
+    It works.
+
+#Note changed from popNo = 16, to popNo = 15 here so changed b test.
 
 #Test to see if the selection works
     a = getPop(popNo)
     #b = fitnessFunction(a)
-    b = {'popNo':[2,3,6,13,9,8,14,1,12,5,15,11,10,7,4,0], 
-         'value':[12,9,9,9,9,6,6,6,6,6,6,3,3,3,3,0]}
+    b = {'popNo':[12, 10, 8, 14, 11, 9, 1, 13, 0, 2, 6, 3, 7, 4, 5], 
+         'value':[9, 9, 9, 9, 6, 6, 6, 6, 6, 6, 3, 3, 3, 3, 0]}
     c = sortPopulation(a, b)
     d = selection(c, eliteNo, popLeft)
     print(d[1].path)
