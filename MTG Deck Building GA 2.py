@@ -228,9 +228,7 @@ children = breedPopulation(selectedPop, eliteNo, popNo)
 #child = breed(selectedPop[0], selectedPop[1])
 #print(child['path'])
 for x in range(0, len(children)):
-    #while len(children[x].path[0]) == 2:
-     #   children[x].path[0] = children[x].path[0][0]
-    print(children[x].path)
+    print(children[x].path[0])
     print(children[x].mainColour)
     print('----------------------')
 
