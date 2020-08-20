@@ -156,17 +156,32 @@ def breed(deck1, deck2):
     child = {'path':[], 'setName':[], 'noCard':[], 'colour':[], 'types':[], 'mainColour':''}
     child['mainColour'] = deck1.mainColour
     deck1Copy, deck2Copy = deck1, deck2   
-    tempPath, deckIndex  = [], []
+    tempPath  = []
     for x in range(0, len(deck1.path)): #add all land cards to child deck
-        if deck1.types[x] == 'Land':
+        if deck1.types[x][0] == 'Land':
             child = appendChild(child, deck1, x, True)
-    for x in range(0, len(child['path'])):
-        deck1Copy.remove(child['path'][x]) #remove land cards from deck1Copy
+            tempPath.append(x)
+    tempPath = sorted(tempPath, reverse=True)
+    for x in range(0, len(tempPath)):
+        deck1Copy.path.pop(tempPath[x]) #remove land cards from deck1Copy
+        deck1Copy.setName.pop(tempPath[x])
+        deck1Copy.noCard.pop(tempPath[x])
+        deck1Copy.colour.pop(tempPath[x])
+        deck1Copy.types.pop(tempPath[x])
+    tempPath.clear()
     for x in range(0, len(deck2.path)):
         if deck2.types[x] == 'Land':
             tempPath.append(x)
+    tempPath = sorted(tempPath, reverse=True)
     for x in range(0, len(tempPath)):
-        deck2Copy.pop(x) #remove land cards from deck2Copy
+        deck2Copy.path.pop(tempPath[x])#remove land cards from deck2Copy
+        deck2Copy.setName.pop(tempPath[x])
+        deck2Copy.noCard.pop(tempPath[x])
+        deck2Copy.colour.pop(tempPath[x])
+        deck2Copy.types.pop(tempPath[x])
+    tempPath.clear()
+    #print(deck1Copy.path)
+    #print('----------------------')
     (deck1Copy.path).extend(deck2Copy.path) #add all cards and attributes to deck1Copy
     (deck1Copy.setName).extend(deck2Copy.setName)
     (deck1Copy.noCard).extend(deck2Copy.noCard)
@@ -174,9 +189,14 @@ def breed(deck1, deck2):
     (deck1Copy.types).extend(deck2Copy.types)
     for x in range(0, len(deck1Copy.path)):
         if deck1.colour[x] != child['mainColour'] and len(deck1.colour[x]) != 0:
-            deckIndex.append(x)
-    for x in range(1, len(deckIndex)+1):
-        deck1Copy.path.pop(deckIndex[-x])
+            tempPath.append(x)
+    tempPath = sorted(tempPath, reverse=True)
+    for x in range(0, len(tempPath)):
+        deck1Copy.path.pop(tempPath[x]) #remove cards from deck1Copy
+        deck1Copy.setName.pop(tempPath[x])
+        deck1Copy.noCard.pop(tempPath[x])
+        deck1Copy.colour.pop(tempPath[x])
+        deck1Copy.types.pop(tempPath[x])
     for x in range(0, len(deck1Copy.path)):
         deck1Copy.path[x] = [deck1Copy.path[x], x]
     randPath = random.sample(deck1Copy.path, len(deck1Copy.path)) #randomise deck
@@ -200,7 +220,7 @@ def appendChild(child, deck, x, flag):
     child['setName'].append(deck.setName[x])
     child['noCard'].append(deck.noCard[x])
     child['colour'].append(deck.colour[x])
-    child['types'].append(deck.types[x])
+    child['types'].append(deck.types[x][0])
     return child
 
 #breed all the population
@@ -225,10 +245,8 @@ fitness = {'popNo':[12, 10, 8, 14, 11, 9, 1, 13, 0, 2, 6, 3, 7, 4, 5],
 sortedPop = sortPopulation(population, fitness)
 selectedPop = selection(sortedPop, eliteNo, popLeft)
 children = breedPopulation(selectedPop, eliteNo, popNo)
-#child = breed(selectedPop[0], selectedPop[1])
-#print(child['path'])
 for x in range(0, len(children)):
-    print(children[x].path[0])
+    print(children[x].path)
     print(children[x].mainColour)
     print('----------------------')
 
