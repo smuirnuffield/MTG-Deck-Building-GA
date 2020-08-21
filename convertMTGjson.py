@@ -30,22 +30,26 @@ for x in range(0, len(fileNames)):
     c = []
     d = []
     e = []
-    for i in range(0, len(data['data']['mainBoard'])):
-        #find data in 'data' dictionary
-        a.append(data['data']['mainBoard'][i]['name'])
-        b.append(data['data']['mainBoard'][i]['printings'][0])  
-        c.append(data['data']['mainBoard'][i]['count'])
-        d.append(data['data']['mainBoard'][i]['colors'])
-        e.append(data['data']['mainBoard'][i]['types'])
-    #append this data to files1 dict
-    files1['cardNames'].append([a, x])
-    files1['cardSet'].append(b)
-    files1['cardCount'].append(c)
-    files1['colours'].append(d)
-    files1['types'].append(e)
+    if len(data['data']['mainBoard']) >= 48:
+        for i in range(0, len(data['data']['mainBoard'])):
+            #find data in 'data' dictionary
+            a.append(data['data']['mainBoard'][i]['name'])
+            b.append(data['data']['mainBoard'][i]['printings'][0])  
+            c.append(data['data']['mainBoard'][i]['count'])
+            d.append(data['data']['mainBoard'][i]['colors'])
+            e.append(data['data']['mainBoard'][i]['types'])
+        #append this data to files1 dict
+        files1['cardNames'].append([a, 0])
+        files1['cardSet'].append(b)
+        files1['cardCount'].append(c)
+        files1['colours'].append(d)
+        files1['types'].append(e)
     #close file
     file1.close()
-        
+
+for x in range(0, len(files1['cardNames'])):
+    files1['cardNames'][x] = [files1['cardNames'][x], x]
+
 #create json file and write data
 with open('MTGjson.json', 'w+') as output:
     json.dump(files1, output)
